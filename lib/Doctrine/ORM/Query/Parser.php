@@ -1626,7 +1626,7 @@ class Parser
     public function ScalarExpression()
     {
         $lookahead = $this->_lexer->lookahead['type'];
-        if ($lookahead === Lexer::T_IDENTIFIER) {
+        if ($lookahead === Lexer::T_IDENTIFIER && !$this->_isFunction()) {
             $this->_lexer->peek(); // lookahead => '.'
             $this->_lexer->peek(); // lookahead => token after '.'
             $peek = $this->_lexer->peek(); // lookahead => token after the token after the '.'
