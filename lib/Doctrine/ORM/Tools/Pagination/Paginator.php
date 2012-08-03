@@ -120,7 +120,14 @@ class Paginator implements \Countable, \IteratorAggregate
     /**
      * {@inheritdoc}
      */
-    public function getIterator()
+    public function getIterator() {
+        return new \ArrayIterator($this->getResult());
+    }
+    
+    /**
+     * returns the result of the paginated query.
+     */
+    public function getResult()
     {
         $offset = $this->query->getFirstResult();
         $length = $this->query->getMaxResults();
@@ -155,7 +162,7 @@ class Paginator implements \Countable, \IteratorAggregate
                 ->getResult($this->query->getHydrationMode())
             ;
         }
-        return new \ArrayIterator($result);
+        return $result;
     }
 
     /**
