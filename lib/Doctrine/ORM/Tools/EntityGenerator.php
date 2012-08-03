@@ -20,8 +20,8 @@
 namespace Doctrine\ORM\Tools;
 
 use Doctrine\ORM\Mapping\ClassMetadataInfo,
-    Doctrine\ORM\Mapping\AssociationMapping,
-    Doctrine\Common\Util\Inflector;
+    Doctrine\Common\Util\Inflector,
+    Doctrine\DBAL\Types\Type;
 
 /**
  * Generic class used to generate PHP5 entity classes from ClassMetadataInfo instances
@@ -136,6 +136,23 @@ public function <methodName>(<methodTypeHint>$<variableName>)
 <spaces>return $this;
 }';
 
+    /**
+     * @var string
+     */
+    private static $_removeMethodTemplate =
+'/**
+ * <description>
+ *
+ * @param <variableType>$<variableName>
+ */
+public function <methodName>(<methodTypeHint>$<variableName>)
+{
+<spaces>$this-><fieldName>->removeElement($<variableName>);
+}';
+
+    /**
+     * @var string
+     */
     private static $_lifecycleCallbackMethodTemplate =
 '/**
  * @<name>
@@ -672,6 +689,9 @@ public function <methodName>()
                 if ($code = $this->_generateEntityStubMethod($metadata, 'add', $associationMapping['fieldName'], $associationMapping['targetEntity'])) {
                     $methods[] = $code;
                 }
+                if ($code = $this->_generateEntityStubMethod($metadata, 'remove', $associationMapping['fieldName'], $associationMapping['targetEntity'])) {
+                    $methods[] = $code;
+                }
                 if ($code = $this->_generateEntityStubMethod($metadata, 'get', $associationMapping['fieldName'], 'Doctrine\Common\Collections\Collection')) {
                     $methods[] = $code;
                 }
@@ -756,12 +776,9 @@ public function <methodName>()
 
     private function _generateEntityStubMethod(ClassMetadataInfo $metadata, $type, $fieldName, $typeHint = null,  $defaultValue = null)
     {
-        if ($type == "add") {
-            $addMethod = explode("\\", $typeHint);
-            $addMethod = end($addMethod);
-            $methodName = $type . $addMethod;
-        } else {
-            $methodName = $type . Inflector::classify($fieldName);
+        $methodName = $type . Inflector::classify($fieldName);
+        if (in_array($type, array("add", "remove")) && substr($methodName, -1) == "s") {
+            $methodName = substr($methodName, 0, -1);
         }
 
         if ($this->_hasMethod($methodName, $metadata)) {
@@ -805,7 +822,7 @@ public function <methodName>()
         $this->_staticReflection[$metadata->name]['methods'][] = $methodName;
 
         $replacements = array(
-            '<name>'        => $this->_annotationsPrefix . $name,
+            '<name>'        => $this->_annotationsPrefix . ucfirst($name),
             '<methodName>'  => $methodName,
         );
 
@@ -862,6 +879,14 @@ public function <methodName>()
 
         if ($this->_generateAnnotations) {
             $lines[] = $this->_spaces . ' *';
+            
+            if (isset($associationMapping['id']) && $associationMapping['id']) {
+                $lines[] = $this->_spaces . ' * @' . $this->_annotationsPrefix . 'Id';
+            
+                if ($generatorType = $this->_getIdGeneratorTypeString($metadata->generatorType)) {
+                    $lines[] = $this->_spaces . ' * @' . $this->_annotationsPrefix . 'GeneratedValue(strategy="' . $generatorType . '")';
+                }
+            }
 
             $type = null;
             switch ($associationMapping['type']) {
@@ -1027,11 +1052,11 @@ public function <methodName>()
                     }
 
                     if (isset($metadata->sequenceGeneratorDefinition['allocationSize'])) {
-                        $sequenceGenerator[] = 'allocationSize="' . $metadata->sequenceGeneratorDefinition['allocationSize'] . '"';
+                        $sequenceGenerator[] = 'allocationSize=' . $metadata->sequenceGeneratorDefinition['allocationSize'];
                     }
 
                     if (isset($metadata->sequenceGeneratorDefinition['initialValue'])) {
-                        $sequenceGenerator[] = 'initialValue="' . $metadata->sequenceGeneratorDefinition['initialValue'] . '"';
+                        $sequenceGenerator[] = 'initialValue=' . $metadata->sequenceGeneratorDefinition['initialValue'];
                     }
 
                     $lines[] = $this->_spaces . ' * @' . $this->_annotationsPrefix . 'SequenceGenerator(' . implode(', ', $sequenceGenerator) . ')';
