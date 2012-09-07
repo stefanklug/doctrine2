@@ -489,7 +489,7 @@ class Parser
         $this->_lexer->resetPeek();
 
         // We deny the COUNT(SELECT * FROM User u) here. COUNT won't be considered a function
-        return ($lookaheadType === Lexer::T_IDENTIFIER && $peek['type'] === Lexer::T_OPEN_PARENTHESIS && $nextpeek['type'] !== Lexer::T_SELECT);
+        return ($lookaheadType >= Lexer::T_IDENTIFIER && $peek['type'] === Lexer::T_OPEN_PARENTHESIS && $nextpeek['type'] !== Lexer::T_SELECT);
     }
 
     /**
@@ -2562,7 +2562,7 @@ class Parser
             case Lexer::T_STRING:
                 $this->match(Lexer::T_STRING);
 
-                return new AST\Literal(AST\Literal::STRING, $this->_lexer->token['value']);
+                return $this->_lexer->token['value'];
 
             case Lexer::T_INPUT_PARAMETER:
                 return $this->InputParameter();
